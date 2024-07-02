@@ -26,21 +26,6 @@ theorem eqv_iff_subset (A B: Collection): A ≈ B ↔ A ⊆ B ∧ B ⊆ A :=
 
 end Subset
 
-inductive Singleton {α} (a: α)
-  | unique
-
-namespace Singleton
-universe u
-variable {α: Type u} (a: α)
-
-instance: Inhabited (Singleton a) where
-  default := .unique
-
-instance: Subsingleton (Singleton a) where
-  allEq | _, _ => rfl
-
-end Singleton
-
 class Star.{u} (α: Type u) where
   /-- Typically denotes Kleene star. Binds tighter than function application. -/
   star: α → α
@@ -62,11 +47,3 @@ class Concat.{u} (α: Type u) where
 
 -- instance {α} [inst: Concat α]: HConcat α α where
 --   hConcat := inst.concat
-
-class Union.{u} (α: Type u) where
-  /-- The `∪` notation follows the definition of the multiplication operator
-  `*`. -/
-  union: α → α → α
-
-@[inherit_doc] infixl:70 " ∪ " => Union.union
-macro_rules | `($x ∪ $y)  => `(binop% Union.union $x $y)
