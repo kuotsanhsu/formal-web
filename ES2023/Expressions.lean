@@ -1,0 +1,3 @@
+inductive Identifier
+
+inductive IdentifierReference
