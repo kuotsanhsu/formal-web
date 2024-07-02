@@ -2,7 +2,12 @@ import Lake
 open Lake DSL
 
 package «formal-web» where
-  -- add package configuration options here
+  leanOptions := #[
+    ⟨`autoImplicit, false⟩
+  , ⟨`relaxedAutoImplicit, false⟩
+  -- , ⟨`pp.unicode.fun, true⟩ -- pretty-prints `fun a ↦ b`
+  -- , ⟨`pp.proofs.withType, false⟩
+  ]
 
 lean_lib ES2023 where
   -- add library configuration options here
