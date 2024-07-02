@@ -1,5 +1,5 @@
-import FormalLanguage.Def
-import SoftwareFoundations.Lemma
+import ES2023.RegExp.Def
+import ES2023.RegExp.List
 
 namespace RegExp
 universe u
@@ -50,7 +50,7 @@ instance match_empty: (r: RegExp α) → Decidable ([] =~ r)
   | .nothing => isFalse accept_nothing
   | ε => isTrue empty
   | (a: α) => isFalse (nomatch accept_single ·)
-  | r₁ ++ r₂ =>
+  | .append r₁ r₂ =>
     match match_empty r₁, match_empty r₂ with
     | isTrue h₁, isTrue h₂ => isTrue (append h₁ h₂)
     | isFalse hn, _ => isFalse fun h =>
@@ -59,7 +59,7 @@ instance match_empty: (r: RegExp α) → Decidable ([] =~ r)
     | _, isFalse hn => isFalse fun h =>
       have ⟨_, _, e, _, h⟩ := app_exists h
       hn <| (List.nil_of_append_eq_nil e.symm).2 ▸ h
-  | r₁ ∪ r₂ =>
+  | .union r₁ r₂ =>
     match match_empty r₁, match_empty r₂ with
     | isFalse hn₁, isFalse hn₂ => isFalse fun h => (union_disj h).elim hn₁ hn₂
     | isTrue h, _ => isTrue (unionL h)
@@ -105,9 +105,9 @@ class Der (der: α → RegExp α → RegExp α) where
 def derive (a: α): RegExp α → RegExp α
   | .nothing | ε => ∅
   | (b: α) => if a = b then ε else ∅
-  | r₁ ++ r₂ =>
+  | .append r₁ r₂ =>
     if [] =~ r₁ then (derive a r₁ ++ r₂) ∪ derive a r₂ else derive a r₁ ++ r₂
-  | r₁ ∪ r₂ => derive a r₁ ∪ derive a r₂
+  | .union r₁ r₂ => derive a r₁ ∪ derive a r₂
   | r* => derive a r ++ r*
 
 instance derives: @Der α derive where
@@ -117,7 +117,7 @@ instance derives: @Der α derive where
       | ε, h => nomatch accept_empty h
       | (b: α), h =>
         match (accept_single h).symm with | rfl => trans empty (if_pos rfl).symm
-      | r ++ _, h =>
+      | .append r _, h =>
         (cons_accept_append h).elim
         fun | ⟨_, _, h, h₁, h₂⟩ =>
               have := h.symm ▸ append (mp h₁) h₂
@@ -125,14 +125,14 @@ instance derives: @Der α derive where
               then trans (unionL this) (if_pos e).symm
               else trans this (if_neg e).symm
         fun ⟨e, h₂⟩ => trans (unionR (mp h₂)) (if_pos e).symm
-      | _ ∪ _, h => (union_disj h).elim (unionL ∘ mp) (unionR ∘ mp)
+      | .union .., h => (union_disj h).elim (unionL ∘ mp) (unionR ∘ mp)
       | _*, h =>
         have ⟨_, _, h, h₁, h₂⟩ := cons_accept_star h; h ▸ append (mp h₁) h₂
     let rec mpr {a} {s: List α}: {r: RegExp α} → s =~ derive a r → a::s =~ r
       | (b: α), h => if e: a = b
         then match trans h (if_pos e) with | empty => e ▸ single
         else nomatch trans h (if_neg e)
-      | r ++ _, h => if e: [] =~ r
+      | .append r _, h => if e: [] =~ r
         then
           match trans h (if_pos e) with
           | unionL (append h₁ h₂) => append (mpr h₁) h₂
@@ -140,8 +140,8 @@ instance derives: @Der α derive where
         else
           match trans h (if_neg e) with
           | append h₁ h₂ => append (mpr h₁) h₂
-      | _ ∪ _, unionL h => unionL (mpr h)
-      | _ ∪ _, unionR h => unionR (mpr h)
+      | .union .., unionL h => unionL (mpr h)
+      | .union .., unionR h => unionR (mpr h)
       | _*, append h₁ h₂ => starAppend (mpr  h₁) h₂
     ⟨mp, mpr⟩
 
