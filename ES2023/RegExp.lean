@@ -57,7 +57,7 @@ inductive Accept: List α → RegExp α → Prop
 @[inherit_doc] infix:50 " =~ " => Accept
 
 namespace Accept
-variable {a b : α} {s : List α} {r r₁ r₂ : RegExp α}
+variable {a : α} {s : List α} {r r₁ r₂ : RegExp α}
 
 theorem nothing_def : ¬ s =~ nothing :=  (nomatch ·)
 
@@ -67,74 +67,63 @@ theorem empty_def : s =~ {} → s = []
 theorem single_def : s =~ {a} → s = [a]
   | single => rfl
 
-theorem app_exists : s =~ r₁ ++ r₂ → ∃ s₁ s₂, s = s₁ ++ s₂ ∧ s₁ =~ r₁ ∧ s₂ =~ r₂
+theorem append_def : s =~ r₁ ++ r₂ → ∃ s₁ s₂, s = s₁ ++ s₂ ∧ s₁ =~ r₁ ∧ s₂ =~ r₂
   | append h₁ h₂ => ⟨_, _, rfl, h₁, h₂⟩
 
-theorem union_disj : s =~ r₁ ∪ r₂ → s =~ r₁ ∨ s =~ r₂
+theorem union_def : s =~ r₁ ∪ r₂ → s =~ r₁ ∨ s =~ r₂
   | unionL h => .inl h
   | unionR h => .inr h
 
-theorem cons_append
-  : a::s =~ r₁ ++ r₂
-  → (∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r₁ ∧ s₂ =~ r₂) ∨
-    ([] =~ r₁ ∧ a::s =~ r₂)
-:= by
-  generalize et : a::s = t
-  intro
-  | .append (s₁ := []) h₁ h₂ => exact .inr ⟨h₁, h₂⟩
-  | .append (s₁ := b::s₁) h₁ h₂ =>
-    cases et; exact .inl ⟨_, _, rfl, h₁, h₂⟩
+theorem cons_append (h : a::s =~ r₁ ++ r₂)
+  : (∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r₁ ∧ s₂ =~ r₂) ∨ ([] =~ r₁ ∧ a::s =~ r₂)
+:=
+  match h.append_def with
+  | ⟨[], _, rfl, h⟩ => .inr h
+  | ⟨_::s₁, s₂, e, _⟩ => match e.symm with | rfl => .inl ⟨s₁, s₂, rfl, ‹_›⟩
 
 theorem starRec {motive : ∀ {s}, s =~ r* → Prop}
-  (base : motive .starEmpty)
-  (ind : ∀ {s₁ s₂}, (h₁ : s₁ =~ r) → (h₂ : s₂ =~ r*)
-    → motive h₂ → motive (h₁.starAppend h₂))
+  (base : motive starEmpty)
+  (ind : ∀ {s₁ s₂}, (h₁ : s₁ =~ r) → (h₂ : s₂ =~ r*) → motive h₂ → motive (starAppend h₁ h₂))
   {s} (h : s =~ r*) : motive h
 := by
-  generalize er : r* = r; rw [er] at h
+  generalize e : r* = r' ; rw [e] at h
   induction h
-  case empty | single | append | unionL | unionR => exact nomatch er
+  case empty | single | append | unionL | unionR => exact nomatch e
   case starEmpty => exact base
-  case starAppend s₁ s₂ _ h₁ h₂ _ ih =>
-    cases er; cases s₁
+  case starAppend s₁ s₂ r' h₁ h₂ _ ih =>
+    cases e ; cases s₁
     . case nil => exact ih h rfl
     . case cons => exact ind h₁ h₂ (ih h₂ rfl)
 
-theorem cons_star
-  : a::s =~ r* → ∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r ∧ s₂ =~ r*
-:= by
-  generalize et : a::s = t
+theorem cons_star : a::s =~ r* → ∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r ∧ s₂ =~ r* := by
+  generalize e : a::s = t
   intros h
   induction h using starRec
-  case base => exact nomatch et
+  case base => exact nomatch e
   case ind s₁ s₂ h₁ h₂ ih =>
     cases s₁
-    . case nil => exact ih et
-    . case cons => cases et; exact ⟨_, _, rfl, h₁, h₂⟩
+    . case nil => exact ih e
+    . case cons => cases e ; exact ⟨_, _, rfl, h₁, h₂⟩
 
 end Accept
 
-instance match_empty : (r : RegExp α) → Decidable ([] =~ r)
+protected instance match_empty : (r : RegExp α) → Decidable ([] =~ r)
   | nothing => isFalse Accept.nothing_def
   | empty => isTrue .empty
-  | single _ => isFalse (nomatch Accept.single_def ·)
+  | single _ => isFalse fun h => nomatch h.single_def
   | append r₁ r₂ =>
-    match match_empty r₁, match_empty r₂ with
+    match r₁.match_empty, r₂.match_empty with
     | isTrue h₁, isTrue h₂ => isTrue (h₁.append h₂)
-    | isFalse hn, _ => isFalse fun h =>
-      have ⟨_, _, e, h, _⟩ := h.app_exists
-      hn <| (List.append_eq_nil.mp e.symm).1 ▸ h
-    | _, isFalse hn => isFalse fun h =>
-      have ⟨_, _, e, _, h⟩ := h.app_exists
-      hn <| (List.append_eq_nil.mp e.symm).2 ▸ h
+    | isFalse hn, _ => isFalse fun h => match h.append_def with | ⟨[], _, rfl, h, _⟩ => hn h
+    | _, isFalse hn => isFalse fun h => match h.append_def with | ⟨[], _, rfl, _, h⟩ => hn h
   | union r₁ r₂ =>
-    match match_empty r₁, match_empty r₂ with
-    | isFalse hn₁, isFalse hn₂ => isFalse fun h => h.union_disj.rec hn₁ hn₂
+    match r₁.match_empty, r₂.match_empty with
+    | isFalse hn₁, isFalse hn₂ => isFalse fun h => h.union_def.rec hn₁ hn₂
     | isTrue h, _ => isTrue h.unionL
     | _, isTrue h => isTrue h.unionR
   | _* => isTrue .starEmpty
 
-section
+section «Brzozowski derivative»
 variable [DecidableEq α]
 
 /--
@@ -149,7 +138,7 @@ def derive (a : α) : RegExp α → RegExp α
   | union r₁ r₂ => derive a r₁ ∪ derive a r₂
   | r* => derive a r ++ r*
 
-theorem Accept.cons_derive {a} {s : List α} : {r : RegExp α} → a::s =~ r → s =~ derive a r
+theorem Accept.cons_derive {a s} : {r : RegExp α} → a::s =~ r → s =~ derive a r
   | nothing, h => h.nothing_def.rec
   | .empty, h => nomatch h.empty_def
   | .single _, h => match h.single_def.symm with | rfl => trans empty (if_pos rfl).symm
@@ -159,30 +148,30 @@ theorem Accept.cons_derive {a} {s : List α} : {r : RegExp α} → a::s =~ r →
           have := h ▸ h₁.cons_derive.append h₂
           iteInduction (fun _ => this.unionL) fun _ => this
     fun ⟨e, h₂⟩ => trans h₂.cons_derive.unionR (if_pos e).symm
-  | union .., h => h.union_disj.rec (unionL ∘ cons_derive) (unionR ∘ cons_derive)
+  | union .., h => h.union_def.rec (unionL ∘ cons_derive) (unionR ∘ cons_derive)
   | _*, h => have ⟨_, _, h, h₁, h₂⟩ := h.cons_star ; h ▸ h₁.cons_derive.append h₂
 
-theorem Accept.derive_cons {a} {s : List α} : {r : RegExp α} → s =~ derive a r → a::s =~ r
+theorem Accept.derive_cons {a s} : {r : RegExp α} → s =~ derive a r → a::s =~ r
   | .single b, h => if e : a = b
     then match trans h (if_pos e) with | empty => e ▸ single
     else nomatch trans h (if_neg e)
   | .append r _, h => if e : [] =~ r
     then match trans h (if_pos e) with
       | unionL (append h₁ h₂) => h₁.derive_cons.append h₂
-      | unionR h₂ => e.append h₂.derive_cons
+      | unionR h => e.append h.derive_cons
     else match trans h (if_neg e) with
       | append h₁ h₂ => h₁.derive_cons.append h₂
   | union .., unionL h => h.derive_cons.unionL
   | union .., unionR h => h.derive_cons.unionR
   | _*, append h₁ h₂ => h₁.derive_cons.starAppend h₂
 
-instance decAccept (s : List α) (r : RegExp α) : Decidable (s =~ r) :=
-  match s with
+instance decAccept (r : RegExp α) : (s : List α) → Decidable (s =~ r)
   | [] => r.match_empty
   | a::s =>
-    match decAccept s (derive a r) with
+    match decAccept (derive a r) s with
     | isTrue h => isTrue h.derive_cons
     | isFalse hn => isFalse fun h => hn h.cons_derive
-end
+
+end «Brzozowski derivative»
 
 end RegExp
