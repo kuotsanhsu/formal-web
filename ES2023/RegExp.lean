@@ -74,13 +74,6 @@ theorem union_def : s =~ r₁ ∪ r₂ → s =~ r₁ ∨ s =~ r₂
   | unionL h => .inl h
   | unionR h => .inr h
 
-theorem cons_append (h : a::s =~ r₁ ++ r₂)
-  : (∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r₁ ∧ s₂ =~ r₂) ∨ ([] =~ r₁ ∧ a::s =~ r₂)
-:=
-  match h.append_def with
-  | ⟨[], _, rfl, h⟩ => .inr h
-  | ⟨_::s₁, s₂, e, _⟩ => match e.symm with | rfl => .inl ⟨s₁, s₂, rfl, ‹_›⟩
-
 theorem starRec {motive : ∀ {s}, s =~ r* → Prop}
   (base : motive starEmpty)
   (ind : ∀ {s₁ s₂}, (h₁ : s₁ =~ r) → (h₂ : s₂ =~ r*) → motive h₂ → motive (starAppend h₁ h₂))
@@ -143,11 +136,12 @@ theorem Accept.cons_derive {a s} : {r : RegExp α} → a::s =~ r → s =~ derive
   | .empty, h => nomatch h.empty_def
   | .single _, h => match h.single_def.symm with | rfl => trans empty (if_pos rfl).symm
   | .append .., h =>
-    h.cons_append.rec
-    fun | ⟨_, _, h, h₁, h₂⟩ =>
-          have := h ▸ h₁.cons_derive.append h₂
-          iteInduction (fun _ => this.unionL) fun _ => this
-    fun ⟨e, h₂⟩ => trans h₂.cons_derive.unionR (if_pos e).symm
+    match h.append_def with
+    | ⟨[], _, rfl, e, h₂⟩ => trans h₂.cons_derive.unionR (if_pos e).symm
+    | ⟨b::s₁, s₂, e, h₁, h₂⟩ =>
+      match e.symm with
+      | rfl => have := h₁.cons_derive.append h₂
+        iteInduction (fun _ => this.unionL) fun _ => this
   | union .., h => h.union_def.rec (unionL ∘ cons_derive) (unionR ∘ cons_derive)
   | _*, h => have ⟨_, _, h, h₁, h₂⟩ := h.cons_star ; h ▸ h₁.cons_derive.append h₂
 
