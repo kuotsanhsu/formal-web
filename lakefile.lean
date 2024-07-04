@@ -5,6 +5,7 @@ package «formal-web» where
   leanOptions := #[
     ⟨`autoImplicit, false⟩
   , ⟨`relaxedAutoImplicit, false⟩
+  , ⟨`pp.proofs, true⟩
   -- , ⟨`pp.unicode.fun, true⟩ -- pretty-prints `fun a ↦ b`
   -- , ⟨`pp.proofs.withType, false⟩
   ]
