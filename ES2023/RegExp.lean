@@ -17,16 +17,6 @@ inductive RegExp (α: Type u)
 namespace RegExp
 variable {α : Type u}
 
-/-
-Define convenient notations for `RegExp`.
--/
-
-instance : EmptyCollection (RegExp α) where
-  emptyCollection := empty
-
-instance : Singleton α (RegExp α) where
-  singleton := single
-
 /-- Write `r ++ r'` for `RegExp.append r r'`. -/
 instance : Append (RegExp α) where
   append := append
@@ -45,8 +35,8 @@ depart slightly from standard practice in that we do not require the type `α`
 to be finite. This results in a somewhat different theory of regular
 expressions, but the difference doesn't concern us here. -/
 inductive Accept: List α → RegExp α → Prop
-  | empty: Accept [] {}
-  | single {a: α}: Accept [a] {a}
+  | empty: Accept [] empty
+  | single {a: α}: Accept [a] (single a)
   | append {s₁ r₁ s₂ r₂}
     : Accept s₁ r₁ → Accept s₂ r₂ → Accept (s₁ ++ s₂) (r₁ ++ r₂)
   | unionL {s₁ r₁ r₂}: Accept s₁ r₁ → Accept s₁ (r₁ ∪ r₂)
@@ -56,38 +46,23 @@ inductive Accept: List α → RegExp α → Prop
 
 @[inherit_doc] infix:50 " =~ " => Accept
 
-namespace Accept
-variable {a : α} {s : List α} {r r₁ r₂ : RegExp α}
-
-theorem nothing_def : ¬ s =~ nothing :=  (nomatch ·)
-
-theorem single_def : s =~ {a} → s = [a]
-  | single => rfl
-
-theorem append_def : s =~ r₁ ++ r₂ → ∃ s₁ s₂, s = s₁ ++ s₂ ∧ s₁ =~ r₁ ∧ s₂ =~ r₂
-  | append h₁ h₂ => ⟨_, _, rfl, h₁, h₂⟩
-
-theorem union_def : s =~ r₁ ∪ r₂ → s =~ r₁ ∨ s =~ r₂
-  | unionL h => .inl h
-  | unionR h => .inr h
-
-end Accept
-
-protected instance match_empty : (r : RegExp α) → Decidable ([] =~ r)
-  | nothing => isFalse Accept.nothing_def
-  | empty => isTrue .empty
-  | single _ => isFalse fun h => nomatch h.single_def
-  | append r₁ r₂ =>
-    match r₁.match_empty, r₂.match_empty with
-    | isTrue h₁, isTrue h₂ => isTrue (h₁.append h₂)
-    | isFalse hn, _ => isFalse fun h => match h.append_def with | ⟨[], _, rfl, h, _⟩ => hn h
-    | _, isFalse hn => isFalse fun h => match h.append_def with | ⟨[], _, rfl, _, h⟩ => hn h
-  | union r₁ r₂ =>
-    match r₁.match_empty, r₂.match_empty with
-    | isFalse hn₁, isFalse hn₂ => isFalse fun h => h.union_def.rec hn₁ hn₂
-    | isTrue h, _ => isTrue h.unionL
-    | _, isTrue h => isTrue h.unionR
-  | _* => isTrue .starEmpty
+instance (r : RegExp α) : Decidable ([] =~ r) :=
+  accept_nil rfl r
+where accept_nil {s} : [] = s → (r : RegExp α) → Decidable (s =~ r)
+  | _, nothing => isFalse nofun
+  | rfl, empty => isTrue .empty
+  | e, single _ => isFalse fun | .single => nomatch e
+  | e, append r₁ r₂ =>
+    match e, accept_nil rfl r₁, accept_nil rfl r₂ with
+    | rfl, isTrue h₁, isTrue h₂ => isTrue (h₁.append h₂)
+    | e, isFalse hn, _ => isFalse fun | .append h _ => hn ((List.nil_eq_append.mp e).1 ▸ h)
+    | e, _, isFalse hn => isFalse fun | .append _ h => hn ((List.nil_eq_append.mp e).2 ▸ h)
+  | e, union r₁ r₂ =>
+    match e, accept_nil rfl r₁, accept_nil rfl r₂ with
+    | e, isFalse hn₁, isFalse hn₂ => isFalse fun | .unionL h => hn₁ (e ▸ h) | .unionR h => hn₂ (e ▸ h)
+    | rfl, isTrue h, _ => isTrue h.unionL
+    | rfl, _, isTrue h => isTrue h.unionR
+  | rfl, _* => isTrue .starEmpty
 
 section «Brzozowski derivative»
 variable [DecidableEq α]
@@ -98,7 +73,7 @@ variable [DecidableEq α]
 -/
 def derive (a : α) : RegExp α → RegExp α
   | nothing | empty => nothing
-  | single b => if a = b then {} else nothing
+  | single b => if a = b then empty else nothing
   | append r₁ r₂ => if [] =~ r₁ then (derive a r₁ ++ r₂) ∪ derive a r₂ else derive a r₁ ++ r₂
   | union r₁ r₂ => derive a r₁ ∪ derive a r₂
   | r* => derive a r ++ r*
@@ -130,7 +105,7 @@ theorem Accept.derive_cons {a s} : {r : RegExp α} → s =~ derive a r → a::s 
   | _*, append h₁ h₂ => h₁.derive_cons.starAppend h₂
 
 instance decAccept (r : RegExp α) : (s : List α) → Decidable (s =~ r)
-  | [] => r.match_empty
+  | [] => inferInstance
   | a::s =>
     match decAccept (derive a r) s with
     | isTrue h => isTrue h.derive_cons
