@@ -78,18 +78,6 @@ def derive (a : α) : RegExp α → RegExp α
   | union r₁ r₂ => derive a r₁ ∪ derive a r₂
   | r* => derive a r ++ r*
 
-theorem Accept.cons_derive {a s t} (e : t = a::s) : {r : RegExp α} → t =~ r → s =~ derive a r
-  | .empty, empty => nomatch e
-  | .single b, single => match e with | rfl => trans empty (if_pos rfl).symm
-  | .append r₁ r₂, append (s₁ := []) h₁ h₂ => trans (h₂.cons_derive e).unionR (if_pos h₁).symm
-  | .append r₁ r₂, append (s₁ := b::s₁) h₁ h₂ =>
-    match e with | rfl => have := (h₁.cons_derive rfl).append h₂
-      iteInduction (fun _ => this.unionL) fun _ => this
-  | union r₁ r₂, unionL h => (h.cons_derive e).unionL
-  | union r₁ r₂, unionR h => (h.cons_derive e).unionR
-  | r*, starAppend (s₁ := []) h₁ h₂ => sorry -- h₂.cons_derive e
-  | r*, starAppend (s₁ := b::s₁) h₁ h₂ => match e with | rfl => (h₁.cons_derive rfl).append h₂
-
 theorem Accept.derive_cons {a s} : {r : RegExp α} → s =~ derive a r → a::s =~ r
   | .single b, h => if e : a = b
     then match trans h (if_pos e) with | empty => e ▸ single
@@ -103,6 +91,18 @@ theorem Accept.derive_cons {a s} : {r : RegExp α} → s =~ derive a r → a::s 
   | union .., unionL h => h.derive_cons.unionL
   | union .., unionR h => h.derive_cons.unionR
   | _*, append h₁ h₂ => h₁.derive_cons.starAppend h₂
+
+theorem Accept.cons_derive {a s t} (e : t = a::s) : {r : RegExp α} → t =~ r → s =~ derive a r
+  | .empty, empty => nomatch e
+  | .single b, single => match e with | rfl => trans empty (if_pos rfl).symm
+  | .append r₁ r₂, append (s₁ := []) h₁ h₂ => trans (h₂.cons_derive e).unionR (if_pos h₁).symm
+  | .append r₁ r₂, append (s₁ := b::s₁) h₁ h₂ =>
+    match e with | rfl => have := (h₁.cons_derive rfl).append h₂
+      iteInduction (fun _ => this.unionL) fun _ => this
+  | union r₁ r₂, unionL h => (h.cons_derive e).unionL
+  | union r₁ r₂, unionR h => (h.cons_derive e).unionR
+  | r*, starAppend (s₁ := []) h₁ h₂ => sorry -- h₂.cons_derive e
+  | r*, starAppend (s₁ := b::s₁) h₁ h₂ => match e with | rfl => (h₁.cons_derive rfl).append h₂
 
 instance decAccept (r : RegExp α) : (s : List α) → Decidable (s =~ r)
   | [] => inferInstance
