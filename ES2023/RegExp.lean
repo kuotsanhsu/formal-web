@@ -2,17 +2,17 @@ universe u
 
 /-- https://en.wikipedia.org/wiki/Regular_language#Formal_definition
 `α` is the type of alphabet allowed in the regular language. We make it universe-polymorphic. -/
-inductive RegExp (α: Type u)
+inductive RegExp (α : Type u)
   /-- Matches nothing. -/
   | nothing
   /-- Empty string matcher. -/
   | empty
-  | single (a: α)
+  | single (a : α)
   /-- `/ab/` -/
-  | append (r₁ r₂: RegExp α)
+  | append (r₁ r₂ : RegExp α)
   /-- `/a|b/`-/
-  | union (r₁ r₂: RegExp α)
-  | star (r: RegExp α)
+  | union (r₁ r₂ : RegExp α)
+  | star (r : RegExp α)
 
 namespace RegExp
 variable {α : Type u}
@@ -34,14 +34,14 @@ theoretical computer science; really, `∈` is way too overloaded in math. We
 depart slightly from standard practice in that we do not require the type `α`
 to be finite. This results in a somewhat different theory of regular
 expressions, but the difference doesn't concern us here. -/
-inductive Accept: List α → RegExp α → Prop
-  | empty: Accept [] empty
-  | single {a: α}: Accept [a] (single a)
+inductive Accept : List α → RegExp α → Prop
+  | empty : Accept [] empty
+  | single {a: α} : Accept [a] (single a)
   | append {s₁ r₁ s₂ r₂} : Accept s₁ r₁ → Accept s₂ r₂ → Accept (s₁ ++ s₂) (r₁ ++ r₂)
-  | unionL {s₁ r₁ r₂}: Accept s₁ r₁ → Accept s₁ (r₁ ∪ r₂)
-  | unionR {r₁ s₂ r₂}: Accept s₂ r₂ → Accept s₂ (r₁ ∪ r₂)
-  | starEmpty {r}: Accept [] r*
-  | starAppend {s₁ s₂ r}: Accept s₁ r → Accept s₂ r* → Accept (s₁ ++ s₂) r*
+  | unionL {s₁ r₁ r₂} : Accept s₁ r₁ → Accept s₁ (r₁ ∪ r₂)
+  | unionR {r₁ s₂ r₂} : Accept s₂ r₂ → Accept s₂ (r₁ ∪ r₂)
+  | starEmpty {r} : Accept [] r*
+  | starAppend {s₁ s₂ r} : Accept s₁ r → Accept s₂ r* → Accept (s₁ ++ s₂) r*
 
 @[inherit_doc] infix:50 " =~ " => Accept
 
