@@ -107,6 +107,28 @@ theorem Accept.cons_star {a s} {r : RegExp α} (h : a::s =~ r*)
     s.casesOn True fun a s => ∃ s₁ s₂, s = s₁ ++ s₂ ∧ a :: s₁ =~ r ∧ s₂ =~ r*
   ) fun {s₁ _} h₁ h₂ ih => match s₁ with | [] => ih | _::_ => ⟨_, _, rfl, h₁, h₂⟩
 
+example {a s} {r : RegExp α} (h : a::s =~ r*)
+  : ∃ s₁ s₂, s = s₁ ++ s₂ ∧ a::s₁ =~ r ∧ s₂ =~ r*
+:= by
+  generalize e : a::s = t at h
+  induction h using Accept.starRec with
+  | base => nomatch e
+  | @ind s₁ s₂ h₁ h₂ ih =>
+    exact match s₁, e.symm with | [], _ => ih e | _::_, rfl => ⟨_, _, rfl, h₁, h₂⟩
+
+/-
+List.rec {motive : List α → Sort _}
+  (nil : motive [])
+  (cons : (a : α) → (s : List α) → motive s → motive (a::s))
+  (s) : motive s
+-/
+#check List.rec
+def List.appendRec {motive : List α → Sort _}
+  (ind : (left right : List α) → motive left → motive right → motive (left ++ right))
+  (s) : motive s
+:= sorry
+
+
 theorem Accept.cons_derive {a s t} {r : RegExp α} (e : t = a::s) : t =~ r → s =~ derive a r
   | empty => nomatch e
   | single => match e with | rfl => trans empty (if_pos rfl).symm
@@ -115,7 +137,21 @@ theorem Accept.cons_derive {a s t} {r : RegExp α} (e : t = a::s) : t =~ r → s
   | unionL h => (h.cons_derive e).unionL
   | unionR h => (h.cons_derive e).unionR
   | h@(starAppend _ _) =>
-    match s, (e ▸ h).cons_star with | _, ⟨_, _, rfl, h₁, h₂⟩ => (h₁.cons_derive rfl).append h₂
+    -- e : s₁✝ ++ s₂✝ = a :: s
+    -- ∃ s₁ s₂, s = s₁ ++ s₂ ∧ a :: s₁ =~ r✝ ∧ s₂ =~ r✝*
+    match s, (e ▸ h).cons_star with
+    /-
+    w✝¹ w✝ : List α
+    e : s₁✝ ++ s₂✝ = a :: (w✝¹ ++ w✝)
+    ⊢ w✝¹ ++ w✝ =~ derive a r✝*
+    -/
+    | _, ⟨_, _, rfl, h₁, h₂⟩ => _ -- (h₁.cons_derive rfl).append h₂
+    /-
+    x✝ w✝¹ w✝ : List α
+    e : x✝ = w✝¹ ++ w✝
+    e✝ : s₁✝ ++ s₂✝ = a :: x✝
+    ⊢ x✝ =~ derive a r✝*
+    -/
 
 instance decAccept (r : RegExp α) : (s : List α) → Decidable (s =~ r)
   | [] => inferInstance
