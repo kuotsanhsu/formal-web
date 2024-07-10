@@ -65,3 +65,5 @@ assign a unique natural number `aₙ` to each natural number `n`, such that `a�
 and `aₙ₊₊ = fₙ aₙ` for each natural number `n`. -/
 theorem rec (f : ℕ → ℕ → ℕ) (c : ℕ) : ∃ a : ℕ → ℕ, a 0 = c ∧ ∀ n, a n++ = f n (a n) :=
   sorry
+
+end ℕ
