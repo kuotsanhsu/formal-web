@@ -142,7 +142,7 @@ that `b++ = a`.
 #### Exercise 2.2.2
 -/
 theorem uniq_succ : a ≠ 0 → ∃! b, b++ = a :=
-  suffices ∀ a, a ≠ 0 → ∃! b, b++ = a from this a
+  suffices ∀ a ≠ 0, ∃! b, b++ = a from this a
   ind (absurd rfl) fun a _ _ => show ∃! b, b++ = a++ from ⟨a, rfl, succ.inj⟩
 
 /-- #### Definition 2.2.11 : Ordering of the natural numbers
@@ -236,15 +236,15 @@ theorem lt_iff_succ_le : a < b ↔ a++ ≤ b :=
       _ = (a + x)++ := add_succ
       _ = a++ + x := succ_add.symm
       _ = b := hx
-theorem lt_iff_add_pos : a < b ↔ ∃ d : Pos, b = a + d :=
+theorem lt_iff_add_pos : a < b ↔ ∃ d ≠ 0, b = a + d :=
   .intro (fun h : a < b =>
     have ⟨x, (hx : a++ + x = b)⟩ := lt_iff_succ_le.mp h
-    suffices b = a + x++ from ⟨⟨_, succ_ne_zero _⟩, this⟩
+    suffices b = a + x++ from ⟨_, succ_ne_zero _, this⟩
     calc
       _ = a++ + x := hx.symm
       _ = (a + x)++ := succ_add
       _ = a + x++ := add_succ.symm
-  ) fun ⟨⟨d, (pos : d ≠ 0)⟩, (h : b = a + d)⟩ =>
+  ) fun ⟨d, (pos : d ≠ 0), (h : b = a + d)⟩ =>
     suffices a++ ≤ b from lt_iff_succ_le.mpr this
     have ⟨x, (e : x++ = d), _⟩ := uniq_succ pos
     suffices a++ + x = b from ⟨_, this⟩
@@ -272,7 +272,7 @@ is vacuous.) Then we can conclude that `P m` is true for all natural numbers `m 
 #### Exercise 2.2.5
 -/
 theorem strongInd (m₀ : ℕ) {P : ℕ → Prop}
-  (h : ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) : ∀ m, m ≥ m₀ → P m
+  (h : ∀ m ≥ m₀, (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) : ∀ m ≥ m₀, P m
 :=
   fun m hm => show P m from
     suffices ∀ m m', m₀ ≤ m' ∧ m' < m → P m' from h m hm (this m)
@@ -299,8 +299,8 @@ is also true. Prove that `P m` is true for all natural numbers `m ≤ n`; this i
 known as the principle of backwards induction. (Hint: apply induction to the variable
 `n`.)
 -/
-theorem backwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m++ → P m) : P n → ∀ m, m ≤ n → P m :=
-  suffices ∀ n, P n → ∀ m, m ≤ n → P m from this n
+theorem backwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m++ → P m) : P n → ∀ m ≤ n, P m :=
+  suffices ∀ n, P n → ∀ m ≤ n, P m from this n
   ind (fun (k : P 0) m ⟨_, (hx : m + _ = 0)⟩ => show P m from
     suffices m = 0 from this ▸ k ; (eq_zero_of_add_eq_zero hx).1
   ) fun n ih (k : P n++) m ⟨x, (hx : m + x = n++)⟩ => show P m from
@@ -326,7 +326,7 @@ numbers such that whenever `P m` is true, `P m++` is true. Show that if `P n` is
 then `P m` is true for all `m ≥ n`. (This principle is sometimes referred to as
 the principle of induction starting from the base case `n`.)
 -/
-theorem forwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m → P m++) : P n → ∀ m, m ≥ n → P m :=
+theorem forwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m → P m++) : P n → ∀ m ≥ n, P m :=
   fun (k : P n) m ⟨x, (hx : n + x = m)⟩ => show P m from
     suffices ∀ y, P (n + y) from hx ▸ this x
     ind (show P (n + 0) from add_zero.symm.rec k) fun y ih => show P (n + y++) from
