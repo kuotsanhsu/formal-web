@@ -57,7 +57,7 @@ Let `P n` be any property pertaining to a natural number `n`. Suppose that `P 0`
 is true, and suppose that whenever `P n` is true, `P n++` is also true. Then `P n`
 is true for every natural number `n`.
 -/
-axiom ind {P : ℕ → Prop} (zero : P 0) (succ : ∀ n, P n → P n++) (n) : P n
+axiom ind {P : ℕ → Prop} (zero : P 0) (succ : ∀ n, P n → P n++) : ∀ n, P n
 /-- #### Proposition 2.1.16 : Recursive definitions
 Suppose for each natural number `n`, we have some function `fₙ : ℕ → ℕ` from the
 natural numbers to the natural numbers. Let `c` be a natural number. Then we can
