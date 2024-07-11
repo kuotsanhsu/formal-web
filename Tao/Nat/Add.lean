@@ -2,19 +2,19 @@ import Tao.Nat.Peano
 
 namespace ℕ
 
-theorem addAux : ∃ add : ℕ → ℕ → ℕ, ∀ m, add 0 m = m ∧ ∀ n, add n++ m = (add n m)++ :=
+theorem add_def : ∃ add : ℕ → ℕ → ℕ, ∀ m, add 0 m = m ∧ ∀ n, add n++ m = (add n m)++ :=
   suffices ∀ m, ∃ add' : ℕ → ℕ, add' 0 = m ∧ ∀ n, add' n++ = (add' n)++
   from ⟨fun n m => (this m).choose n, fun m => (this m).choose_spec⟩
   rec _
 
-noncomputable def add : ℕ → ℕ → ℕ := addAux.choose
+noncomputable def add : ℕ → ℕ → ℕ := add_def.choose
 noncomputable instance : Add ℕ where
   add := add
 
 variable {n m : ℕ}
 
-theorem zero_add : 0 + m = m := (addAux.choose_spec m).1
-theorem succ_add : n++ + m = (n + m)++ := (addAux.choose_spec m).2 n
+theorem zero_add : 0 + m = m := (add_def.choose_spec m).1
+theorem succ_add : n++ + m = (n + m)++ := (add_def.choose_spec m).2 n
 
 /-- #### Lemma 2.2.2
 For any natural number `n`, `n + 0 = n`.
