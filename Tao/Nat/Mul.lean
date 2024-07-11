@@ -148,13 +148,13 @@ theorem mul_assoc : a * b * c = a * (b * c) :=
 /-- #### Proposition 2.3.6 (Multiplication preserves order) -/
 theorem lt_mul_pos (pos : c ≠ 0) : a < b → a * c < b * c :=
   fun h : a < b =>
-    have ⟨⟨d, (hd : d ≠ 0)⟩, (e : b = a + d)⟩ := lt_iff_add_pos.mp h
-    suffices ∃ D : Pos, b * c = a * c + D from lt_iff_add_pos.mpr this
+    have ⟨d, (hd : d ≠ 0), (e : b = a + d)⟩ := lt_iff_add_pos.mp h
+    suffices ∃ x ≠ 0, b * c = a * c + x from lt_iff_add_pos.mpr this
     have :=
       calc  b * c
         _ = (a + d) * c := congrArg (· * c) e
         _ = a * c + d * c := add_mul
-    ⟨⟨_, pos_of_mul_pos hd pos⟩, this⟩
+    ⟨_, pos_of_mul_pos hd pos, this⟩
 
 /-- #### Corollary2.3.7 (Cancellationlaw) -/
 theorem mul_cancel (pos : c ≠ 0) : a * c = b * c → a = b :=
@@ -175,9 +175,9 @@ theorem mul_cancel (pos : c ≠ 0) : a * c = b * c → a = b :=
 -/
 theorem Euclid_div (n : ℕ) (q : Pos) : ∃ m r : ℕ, 0 ≤ r ∧ r < q ∧ n = m * q + r :=
   have ⟨q, (pos : q ≠ 0)⟩ := q
-  suffices ∀ n, ∃ m r : ℕ, 0 ≤ r ∧ r < q ∧ n = m * q + r from this n
+  suffices ∀ n, ∃ m r, 0 ≤ r ∧ r < q ∧ n = m * q + r from this n
   have pos : 0 < q := ⟨pos.symm, _, zero_add⟩
-  ind (show ∃ m r : ℕ, 0 ≤ r ∧ r < q ∧ 0 = m * q + r from
+  ind (show ∃ m r, 0 ≤ r ∧ r < q ∧ 0 = m * q + r from
     suffices 0 * q + 0 = 0 from ⟨0, 0, order_rfl, pos, this.symm⟩
     calc
       _ = 0 * q := add_zero
