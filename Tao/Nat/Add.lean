@@ -19,7 +19,8 @@ theorem succ_add : n++ + m = (n + m)++ := (add_def.choose_spec m).2 n
 /-- #### Lemma 2.2.2
 For any natural number `n`, `n + 0 = n`.
 -/
-theorem add_zero : ∀ n, n + 0 = n :=
+theorem add_zero : n + 0 = n :=
+  suffices ∀ n, n + 0 = n from this n
   ind zero_add fun n ih =>
     calc n++ + 0
      _ = (n + 0)++ := succ_add
@@ -28,7 +29,8 @@ theorem add_zero : ∀ n, n + 0 = n :=
 /-- #### Lemma2.2.3
 For any natural numbers `n` and `m`, `n + (m++) = (n + m)++`.
 -/
-theorem add_succ : ∀ n, n + m++ = (n + m)++ :=
+theorem add_succ : n + m++ = (n + m)++ :=
+  suffices ∀ n, n + m++ = (n + m)++ from this n
   ind (
     calc  0 + m++
       _ = m++ := zero_add
@@ -43,23 +45,25 @@ theorem add_succ : ∀ n, n + m++ = (n + m)++ :=
 As a particular corollary of Lemma 2.2.2 and Lemma 2.2.3 we see that `n++` = `n + 1`.
 -/
 theorem succ_eq_add_one : n++ = n + 1 :=
-  calc
-    _ = (n + 0)++ := congrArg _ n.add_zero.symm
-    _ = n + 0++ := n.add_succ.symm
+  suffices n + 1 = n++ from this.symm
+  calc  n + 0++
+    _ = (n + 0)++ := add_succ
+    _ = n++ := congrArg _ add_zero
 
 /-- #### Proposition 2.2.4 : Addition is commutative
 For any natural numbers `n` and `m`, `n + m = m + n`.
 -/
-theorem add_comm : ∀ n, n + m = m + n :=
+theorem add_comm : n + m = m + n :=
+  suffices ∀ n, n + m = m + n from this n
   ind (
     calc  0 + m
       _ = m := zero_add
-      _ = m + 0 := m.add_zero.symm
+      _ = m + 0 := add_zero.symm
   ) fun n ih =>
     calc n++ + m
       _ = (n + m)++ := succ_add
       _ = (m + n)++ := congrArg _ ih
-      _ = m + n++ := m.add_succ.symm
+      _ = m + n++ := add_succ.symm
 
 
 variable {a b c : ℕ}
@@ -69,7 +73,8 @@ For any natural numbers `a`, `b`, `c`, we have `(a + b) + c = a + (b + c)`.
 
 #### Exercise 2.2.1
 -/
-theorem add_assoc : ∀ a, a + b + c = a + (b + c) :=
+theorem add_assoc : a + b + c = a + (b + c) :=
+  suffices ∀ a, a + b + c = a + (b + c) from this a
   ind (
     calc  0 + b + c
       _ = b + c := congrArg (· + c) zero_add
@@ -84,7 +89,8 @@ theorem add_assoc : ∀ a, a + b + c = a + (b + c) :=
 /-- #### Proposition2.2.6 : Cancellation law
 Let `a`, `b`, `c` be natural numbers such that `a + b = a + c`. Then we have `b = c`.
 -/
-theorem cancel_add : ∀ a, a + b = a + c → b = c :=
+theorem cancel_add : a + b = a + c → b = c :=
+  suffices ∀ a, a + b = a + c → b = c from this a
   ind (fun (h : 0 + b = 0 + c) =>
     calc  b
       _ = 0 + b := zero_add.symm
@@ -107,14 +113,15 @@ abbrev Pos := Subtype (· ≠ 0)
 If `a` is a positive natural number, and `b` is a natural number, then `a + b` is
 positive (and hence `b + a` is also, by Proposition 2.2.4).
 -/
-theorem pos_add (pos : a ≠ 0) : ∀ b, a + b ≠ 0 :=
+theorem pos_add (pos : a ≠ 0) : a + b ≠ 0 :=
+  suffices ∀ b, a + b ≠ 0 from this b
   ind (
     calc  a + 0
-    _ = a := a.add_zero
-    _ ≠ 0 := pos
+      _ = a := add_zero
+      _ ≠ 0 := pos
   ) fun b _ =>
     calc  a + b++
-      _ = (a + b)++ := add_succ _
+      _ = (a + b)++ := add_succ
       _ ≠ 0 := succ_ne_zero _
 
 /-- #### Corollary 2.2.9
@@ -123,10 +130,10 @@ If `a` and `b` are natural numbers such that `a + b = 0`, then `a = 0` and `b = 
 theorem zero_of_add_eq_zero : a + b = 0 → a = 0 ∧ b = 0 :=
   Classical.mtr fun hn : ¬(a = 0 ∧ b = 0) => show a + b ≠ 0 from
     have : a ≠ 0 ∨ b ≠ 0 := Classical.not_and_iff_or_not_not.mp hn
-    this.rec (pos_add · b) fun pos : b ≠ 0 =>
+    this.rec pos_add fun pos : b ≠ 0 =>
       calc  a + b
-        _ = b + a := add_comm _
-        _ ≠ 0 := pos_add pos _
+        _ = b + a := add_comm
+        _ ≠ 0 := pos_add pos
 
 /-- #### Lemma 2.2.10
 Let `a` be a positive number. Then there exists exactly one natural number `b` such
@@ -134,7 +141,8 @@ that `b++ = a`.
 
 #### Exercise 2.2.2
 -/
-theorem uniq_succ : ∀ a, a ≠ 0 → ∃! b, b++ = a :=
+theorem uniq_succ : a ≠ 0 → ∃! b, b++ = a :=
+  suffices ∀ a, a ≠ 0 → ∃! b, b++ = a from this a
   ind (absurd rfl) fun a _ _ => show ∃! b, b++ = a++ from ⟨a, rfl, succ.inj⟩
 
 /-- #### Definition 2.2.11 : Ordering of the natural numbers
@@ -164,40 +172,40 @@ theorem order_trans : a ≥ b ∧ b ≥ c → a ≥ c :=
   fun ⟨⟨x, (hx : b + x = a)⟩, ⟨y, (hy : c + y = b)⟩⟩ =>
     suffices c + (x + y) = a from ⟨x + y, this⟩
     calc
-      _ = c + (y + x) := congrArg _ (add_comm _)
-      _ = (c + y) + x := c.add_assoc.symm
+      _ = c + (y + x) := congrArg _ add_comm
+      _ = (c + y) + x := add_assoc.symm
       _ = b + x := congrArg (· + x) hy
       _ = a := hx
 theorem order_antisymm : a ≥ b ∧ b ≥ a → a = b :=
   fun ⟨⟨x, (hx : b + x = a)⟩, ⟨y, (hy : a + y = b)⟩⟩ =>
     calc  a
-      _ = a + 0 := a.add_zero.symm
+      _ = a + 0 := add_zero.symm
       _ = a + y :=
         suffices y = 0 from congrArg _ this.symm
         suffices x + y = 0 from (zero_of_add_eq_zero this).2
-        suffices b + (x + y) = b + 0 from cancel_add _ this
+        suffices b + (x + y) = b + 0 from cancel_add this
         calc
-          _ = b + x + y := b.add_assoc.symm
+          _ = b + x + y := add_assoc.symm
           _ = a + y := congrArg (· + y) hx
           _ = b := hy
-          _ = b + 0 := b.add_zero.symm
+          _ = b + 0 := add_zero.symm
       _ = b := hy
 theorem order_congr_add : a ≥ b ↔ a + c ≥ b + c :=
   .intro (fun ⟨x, (hx : b + x = a)⟩ =>
     suffices b + c + x = a + c from ⟨_, this⟩
     calc
-      _ = b + (c + x) := add_assoc _
-      _ = b + (x + c) := congrArg _ (add_comm _)
-      _ = (b + x) + c := b.add_assoc.symm
+      _ = b + (c + x) := add_assoc
+      _ = b + (x + c) := congrArg _ add_comm
+      _ = (b + x) + c := add_assoc.symm
       _ = a + c := congrArg (· + c) hx
   ) fun ⟨x, (hx : b + c + x = a + c)⟩ =>
     suffices b + x = a from ⟨_, this⟩
-    suffices c + (b + x) = c + a from cancel_add _ this
+    suffices c + (b + x) = c + a from cancel_add this
     calc
-      _ = c + b + x := c.add_assoc.symm
-      _ = b + c + x := congrArg (· + x) (add_comm _)
+      _ = c + b + x := add_assoc.symm
+      _ = b + c + x := congrArg (· + x) add_comm
       _ = a + c := hx
-      _ = c + a := add_comm _
+      _ = c + a := add_comm
 theorem lt_iff_succ_le : a < b ↔ a++ ≤ b :=
   .intro (fun ⟨(ne : a ≠ b), x, (hx : a + x = b)⟩ =>
     show ∃ y, a++ + y = b from
@@ -206,26 +214,26 @@ theorem lt_iff_succ_le : a < b ↔ a++ ≤ b :=
       suffices a++ + y = b from ⟨_, this⟩
       calc
         _ = (a + y)++ := succ_add
-        _ = a + y++ := a.add_succ.symm
+        _ = a + y++ := add_succ.symm
         _ = a + x := congrArg _ h
         _ = b := hx
-    suffices 0 ≠ x from have ⟨y, (hy : y++ = x), _⟩ := uniq_succ _ this.symm ; ⟨y, hy⟩
+    suffices 0 ≠ x from have ⟨y, (hy : y++ = x), _⟩ := uniq_succ this.symm ; ⟨y, hy⟩
     fun | rfl => show False from
       suffices a = b from ne this
       calc  a
-        _ = a + 0 := a.add_zero.symm
+        _ = a + 0 := add_zero.symm
         _ = b := hx
   ) fun ⟨x, (hx : a++ + x = b)⟩ =>
     suffices h : a + x++ = b from
       suffices a ≠ b from ⟨this, _, h⟩
       fun | rfl => show False from
         suffices x++ = 0 from succ_ne_zero _ this
-        suffices a + x++ = a + 0 from cancel_add _ this
+        suffices a + x++ = a + 0 from cancel_add this
         calc
           _ = a := h
-          _ = a + 0 := a.add_zero.symm
+          _ = a + 0 := add_zero.symm
     calc
-      _ = (a + x)++ := add_succ _
+      _ = (a + x)++ := add_succ
       _ = a++ + x := succ_add.symm
       _ = b := hx
 theorem lt_iff_add_pos : a < b ↔ ∃ d : Pos, b = a + d :=
@@ -235,14 +243,14 @@ theorem lt_iff_add_pos : a < b ↔ ∃ d : Pos, b = a + d :=
     calc
       _ = a++ + x := hx.symm
       _ = (a + x)++ := succ_add
-      _ = a + x++ := a.add_succ.symm
+      _ = a + x++ := add_succ.symm
   ) fun ⟨⟨d, (pos : d ≠ 0)⟩, (h : b = a + d)⟩ =>
     suffices a++ ≤ b from lt_iff_succ_le.mpr this
-    have ⟨x, (e : x++ = d), _⟩ := uniq_succ _ pos
+    have ⟨x, (e : x++ = d), _⟩ := uniq_succ pos
     suffices a++ + x = b from ⟨_, this⟩
     calc
       _ = (a + x)++ := succ_add
-      _ = a + x++ := a.add_succ.symm
+      _ = a + x++ := add_succ.symm
       _ = a + d := congrArg _ e
       _ = b := h.symm
 
@@ -263,9 +271,8 @@ is vacuous.) Then we can conclude that `P m` is true for all natural numbers `m 
 
 #### Exercise 2.2.5
 -/
-theorem strongInd (m₀ : ℕ) (P : ℕ → Prop)
-  (h : ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m)
-  : ∀ m, m ≥ m₀ → P m
+theorem strongInd (m₀ : ℕ) {P : ℕ → Prop}
+  (h : ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) : ∀ m, m ≥ m₀ → P m
 :=
   fun m hm => show P m from
     suffices ∀ m, ∀ m', m₀ ≤ m' ∧ m' < m → P m' from h m hm (this m)
@@ -292,7 +299,7 @@ is also true. Prove that `P m` is true for all natural numbers `m ≤ n`; this i
 known as the principle of backwards induction. (Hint: apply induction to the variable
 `n`.)
 -/
-theorem backwardInd (n : ℕ) (P : ℕ → Prop) (h : ∀ m, P m++ → P m) : P n → ∀ m, m ≤ n → P m :=
+theorem backwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m++ → P m) : P n → ∀ m, m ≤ n → P m :=
   suffices ∀ n, P n → ∀ m, m ≤ n → P m from this n
   ind (fun (k : P 0) m ⟨_, (hx : m + _ = 0)⟩ => show P m from
     suffices m = 0 from this ▸ k ; (zero_of_add_eq_zero hx).1
@@ -303,13 +310,13 @@ theorem backwardInd (n : ℕ) (P : ℕ → Prop) (h : ∀ m, P m++ → P m) : P 
       calc
         _ = m + x := hx.symm
         _ = m + 0 := congrArg _ e
-        _ = m := add_zero _
+        _ = m := add_zero
     | .inr (pos : x ≠ 0) =>
       suffices m ≤ n from ih (h _ k) m this
-      have ⟨y, (hy : y++ = x), _⟩ := uniq_succ _ pos
+      have ⟨y, (hy : y++ = x), _⟩ := uniq_succ pos
       suffices (m + y)++ = n++ from ⟨_, succ.inj this⟩
       calc
-        _ = m + y++ := m.add_succ.symm
+        _ = m + y++ := add_succ.symm
         _ = m + x := congrArg _ hy
         _ = n++ := hx
 
@@ -319,10 +326,10 @@ numbers such that whenever `P m` is true, `P m++` is true. Show that if `P n` is
 then `P m` is true for all `m ≥ n`. (This principle is sometimes referred to as
 the principle of induction starting from the base case `n`.)
 -/
-theorem forwardInd (n : ℕ) (P : ℕ → Prop) (h : ∀ m, P m → P m++) : P n → ∀ m, m ≥ n → P m :=
+theorem forwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m → P m++) : P n → ∀ m, m ≥ n → P m :=
   fun (k : P n) m ⟨x, (hx : n + x = m)⟩ => show P m from
     suffices ∀ y, P (n + y) from hx ▸ this x
-    ind (show P (n + 0) from n.add_zero.symm.rec k) fun y ih => show P (n + y++) from
-      suffices P (n + y)++ from n.add_succ.symm.rec this ; h _ ih
+    ind (show P (n + 0) from add_zero.symm.rec k) fun y ih => show P (n + y++) from
+      suffices P (n + y)++ from add_succ.symm.rec this ; h _ ih
 
 end ℕ
