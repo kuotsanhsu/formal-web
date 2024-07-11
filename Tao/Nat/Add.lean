@@ -141,7 +141,7 @@ that `b++ = a`.
 
 #### Exercise 2.2.2
 -/
-theorem uniq_succ : a ≠ 0 → ∃! b, b++ = a :=
+theorem unique_succ : a ≠ 0 → ∃! b, b++ = a :=
   suffices ∀ a ≠ 0, ∃! b, b++ = a from this a
   ind (absurd rfl) fun a _ _ => show ∃! b, b++ = a++ from ⟨a, rfl, succ.inj⟩
 
@@ -217,7 +217,7 @@ theorem lt_iff_succ_le : a < b ↔ a++ ≤ b :=
         _ = a + y++ := add_succ.symm
         _ = a + x := congrArg _ h
         _ = b := hx
-    suffices 0 ≠ x from have ⟨y, (hy : y++ = x), _⟩ := uniq_succ this.symm ; ⟨y, hy⟩
+    suffices 0 ≠ x from have ⟨y, (hy : y++ = x), _⟩ := unique_succ this.symm ; ⟨y, hy⟩
     fun | rfl => show False from
       suffices a = b from ne this
       calc  a
@@ -246,7 +246,7 @@ theorem lt_iff_add_pos : a < b ↔ ∃ d ≠ 0, b = a + d :=
       _ = a + x++ := add_succ.symm
   ) fun ⟨d, (pos : d ≠ 0), (h : b = a + d)⟩ =>
     suffices a++ ≤ b from lt_iff_succ_le.mpr this
-    have ⟨x, (e : x++ = d), _⟩ := uniq_succ pos
+    have ⟨x, (e : x++ = d), _⟩ := unique_succ pos
     suffices a++ + x = b from ⟨_, this⟩
     calc
       _ = (a + x)++ := succ_add
@@ -313,7 +313,7 @@ theorem backwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m++ → P m) : P 
         _ = m := add_zero
     | .inr (pos : x ≠ 0) =>
       suffices m ≤ n from ih (h _ k) m this
-      have ⟨y, (hy : y++ = x), _⟩ := uniq_succ pos
+      have ⟨y, (hy : y++ = x), _⟩ := unique_succ pos
       suffices (m + y)++ = n++ from ⟨_, succ.inj this⟩
       calc
         _ = m + y++ := add_succ.symm
