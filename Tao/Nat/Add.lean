@@ -127,7 +127,7 @@ theorem pos_add (pos : a ≠ 0) : a + b ≠ 0 :=
 /-- #### Corollary 2.2.9
 If `a` and `b` are natural numbers such that `a + b = 0`, then `a = 0` and `b = 0`.
 -/
-theorem zero_of_add_eq_zero : a + b = 0 → a = 0 ∧ b = 0 :=
+theorem eq_zero_of_add_eq_zero : a + b = 0 → a = 0 ∧ b = 0 :=
   Classical.mtr fun hn : ¬(a = 0 ∧ b = 0) => show a + b ≠ 0 from
     have : a ≠ 0 ∨ b ≠ 0 := Classical.not_and_iff_or_not_not.mp hn
     this.rec pos_add fun pos : b ≠ 0 =>
@@ -182,7 +182,7 @@ theorem order_antisymm : a ≥ b ∧ b ≥ a → a = b :=
       _ = a + 0 := add_zero.symm
       _ = a + y :=
         suffices y = 0 from congrArg _ this.symm
-        suffices x + y = 0 from (zero_of_add_eq_zero this).2
+        suffices x + y = 0 from (eq_zero_of_add_eq_zero this).2
         suffices b + (x + y) = b + 0 from cancel_add this
         calc
           _ = b + x + y := add_assoc.symm
@@ -260,7 +260,7 @@ is true: `a < b`, `a = b`, or `a > b`.
 
 #### Exercise 2.2.4
 -/
-theorem order_trichotomy : a < b ∨ a = b ∨ a > b := sorry
+theorem order_trichotomy : ∀ a b : ℕ, a < b ∨ a = b ∨ a > b := sorry
 
 /-- #### Proposition 2.2.14 : Strong principle of induction
 Let `m₀` be a natural number, and let `P m` be a property pertaining to an arbitrary
@@ -275,9 +275,9 @@ theorem strongInd (m₀ : ℕ) {P : ℕ → Prop}
   (h : ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) : ∀ m, m ≥ m₀ → P m
 :=
   fun m hm => show P m from
-    suffices ∀ m, ∀ m', m₀ ≤ m' ∧ m' < m → P m' from h m hm (this m)
+    suffices ∀ m m', m₀ ≤ m' ∧ m' < m → P m' from h m hm (this m)
     ind (fun m' ⟨_, (ne : m' ≠ 0), _, (hx : m' + _ = 0)⟩ =>
-      suffices m' = 0 from (ne this).rec ; (zero_of_add_eq_zero hx).1
+      suffices m' = 0 from (ne this).rec ; (eq_zero_of_add_eq_zero hx).1
     ) fun m ih m' (k : m₀ ≤ m' ∧ m' < m++) => show P m' from
       match Classical.em (m' = m) with
       | .inl (e : m' = m) =>
@@ -302,7 +302,7 @@ known as the principle of backwards induction. (Hint: apply induction to the var
 theorem backwardInd (n : ℕ) {P : ℕ → Prop} (h : ∀ m, P m++ → P m) : P n → ∀ m, m ≤ n → P m :=
   suffices ∀ n, P n → ∀ m, m ≤ n → P m from this n
   ind (fun (k : P 0) m ⟨_, (hx : m + _ = 0)⟩ => show P m from
-    suffices m = 0 from this ▸ k ; (zero_of_add_eq_zero hx).1
+    suffices m = 0 from this ▸ k ; (eq_zero_of_add_eq_zero hx).1
   ) fun n ih (k : P n++) m ⟨x, (hx : m + x = n++)⟩ => show P m from
     match Classical.em (x = 0) with
     | .inl (e : x = 0) =>
