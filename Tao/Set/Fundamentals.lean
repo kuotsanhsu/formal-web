@@ -19,7 +19,7 @@ NOTE: must use `≈` instead of `=`; otherwise, equality becomes trivial.
 axiom Set : Type
 namespace Set
 variable {a b c d x y : Set} -- objects, which are sets in PST
-variable {A B C : Set} -- sets
+variable {A B C D : Set} -- sets
 
 /-- #### Definition 3.1.1 -/
 protected axiom Mem : Set → Set → Prop
@@ -35,6 +35,10 @@ instance : Setoid Set where
 
 instance : Trans (α := Set) (· ≈ ·) (· ≈ ·) (· ≈ ·) where
   trans := Setoid.trans
+
+/-- The "is an element of" relation `∈` obeys the axiom of substitution (see Section A.7). -/
+theorem equiv_congr (h₁ : A ≈ C) (h₂ : B ≈ D) : A ≈ B ↔ C ≈ D :=
+  forall_congr' fun x => iff_congr (h₁ x) (h₂ x)
 
 /-- #### Axiom 3.3 (Empty set) -/
 protected axiom empty : ∃ A : Set, ∀ x, x ∉ A
@@ -66,20 +70,19 @@ noncomputable instance : Union Set where
   union A B := (Set.union A B).choose
 theorem union_def : x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B := (Set.union A B).choose_spec x
 
-/-- #### Remark 3.1.11 -/
-example {A'} : A ≈ A' → A ∪ B ≈ A' ∪ B :=
-  fun (h : ∀ x, x ∈ A ↔ x ∈ A') x =>
+theorem union_congr (h₁ : A ≈ C) (h₂ : B ≈ D) : A ∪ B ≈ C ∪ D :=
+  fun x =>
     calc  x ∈ A ∪ B
       _ ↔ x ∈ A ∨ x ∈ B := union_def
-      _ ↔ x ∈ A' ∨ x ∈ B := or_congr_left (h x)
-      _ ↔ x ∈ A' ∪ B := union_def.symm
+      _ ↔ x ∈ C ∨ x ∈ D := or_congr (h₁ x) (h₂ x)
+      _ ↔ x ∈ C ∪ D := union_def.symm
+
 /-- #### Remark 3.1.11 -/
-example {B'} : B ≈ B' → A ∪ B ≈ A ∪ B' :=
-  fun (h : ∀ x, x ∈ B ↔ x ∈ B') x =>
-    calc  x ∈ A ∪ B
-      _ ↔ x ∈ A ∨ x ∈ B := union_def
-      _ ↔ x ∈ A ∨ x ∈ B' := or_congr_right (h x)
-      _ ↔ x ∈ A ∪ B' := union_def.symm
+theorem union_congr_left {A'} (h : A ≈ A') : A ∪ B ≈ A' ∪ B :=
+  union_congr h Setoid.rfl
+/-- #### Remark 3.1.11 -/
+theorem union_congr_right {B'} (h : B ≈ B') : A ∪ B ≈ A ∪ B' :=
+  union_congr Setoid.rfl h
 
 noncomputable instance : Insert Set Set where
   insert x A := {x} ∪ A
@@ -100,7 +103,7 @@ theorem unique_singleton : {a} ≈ {b} ↔ a ≈ b :=
   ) fun (h : a ≈ b) x =>
     calc  x ∈ {a}
       _ ↔ x ≈ a := singleton_def
-      _ ↔ x ≈ b := ⟨(trans · h), (trans · (Setoid.symm h))⟩ -- FIXME: simplify?
+      _ ↔ x ≈ b := equiv_congr Setoid.rfl h
       _ ↔ x ∈ {b} := singleton_def.symm
 /-- #### Remarks 3.1.8
 Given any two objects `a` and `b`, there is only one pair set formed by `a` and `b`.
@@ -176,10 +179,8 @@ noncomputable def ofNat : Nat → Set
 example : 0 ≈ ∅ := Setoid.rfl
 theorem one_def : 1 ≈ {∅} := empty_union
 theorem singleton_one : {1} ≈ {{∅}} := unique_singleton.mpr empty_union
-example : 2 ≈ {∅, {∅}} := -- show 1 ∪ {1} ≈ _ ∪ {{∅}} from congrArg (· ∪ _) one_def
-  calc  1 ∪ {1}
-    _ ≈ {∅} ∪ {1} := sorry
-    _ ≈ {∅, {∅}} := sorry
+example : 2 ≈ {∅, {∅}} :=
+  show 1 ∪ {1} ≈ {∅} ∪ {{∅}} from union_congr one_def singleton_one
 
 /-- #### Examples 3.1.9
 These four sets are not equal to each other: `0`, `1`, `{1}`, `2`.
@@ -189,9 +190,11 @@ example : 0 ≠ 1 ∧ 0 ≠ {1} ∧ 0 ≠ 2 ∧ 1 ≠ {1} ∧ 1 ≠ 2 ∧ {1} �
   sorry
 
 example : {a, b, c} ≈ {a} ∪ {b} ∪ {c} :=
-  sorry
+  show {a} ∪ ({b} ∪ {c}) ≈ {a} ∪ {b} ∪ {c} from Setoid.symm union_assoc
 example : {a, b, c, d} ≈ {a} ∪ {b} ∪ {c} ∪ {d} :=
-  sorry
+  calc  {a} ∪ ({b} ∪ ({c} ∪ {d}))
+    _ ≈ {a} ∪ {b} ∪ ({c} ∪ {d}) := Setoid.symm union_assoc
+    _ ≈ {a} ∪ {b} ∪ {c} ∪ {d} := Setoid.symm union_assoc
 
 /-- #### Example 3.1.4 -/
 example : {1, 2, 3, 4, 5} ≈ {3, 4, 2, 1, 5} :=
