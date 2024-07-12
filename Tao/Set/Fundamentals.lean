@@ -22,9 +22,9 @@ variable {a b c d x y : Set} -- objects, which are sets in PST
 variable {A B C D : Set} -- sets
 
 /-- #### Definition 3.1.1 -/
-protected axiom Mem : Set → Set → Prop
+protected axiom mem : Set → Set → Prop
 instance : Membership Set Set where
-  mem := Set.Mem
+  mem := Set.mem
 
 /-- #### Axiom 3.2 (Equality of sets) -/
 instance : Setoid Set where
@@ -35,6 +35,27 @@ instance : Setoid Set where
 
 instance : Trans (α := Set) (· ≈ ·) (· ≈ ·) (· ≈ ·) where
   trans := Setoid.trans
+theorem neq_of_eq_neq : A ≈ B → B ≉ C → A ≉ C :=
+  fun (h₁ : A ≈ B) (h₂ : B ≉ C) (h : A ≈ C) =>
+    suffices B ≈ C from h₂ this
+    calc  B
+      _ ≈ A := Setoid.symm h₁
+      _ ≈ C := h
+instance : Trans (α := Set) (· ≈ ·) (· ≉ ·) (· ≉ ·) where
+  trans := neq_of_eq_neq
+theorem neq_of_neq_eq : A ≉ B → B ≈ C → A ≉ C :=
+  fun (h₁ : A ≉ B) (h₂ : B ≈ C) (h : A ≈ C) =>
+    suffices A ≈ B from h₁ this
+    calc  A
+      _ ≈ C := h
+      _ ≈ B := Setoid.symm h₂
+instance : Trans (α := Set) (· ≉ ·) (· ≈ ·) (· ≉ ·) where
+  trans := neq_of_neq_eq
+
+#check (trans : A = B → B ≠ C → A ≠ C)
+#check_failure (trans : A ≈ B → B ≉ C → A ≉ C)
+#check (trans : A ≠ B → B = C → A ≠ C)
+#check_failure (trans : A ≉ B → B ≈ C → A ≉ C)
 
 /-- The "is an element of" relation `∈` obeys the axiom of substitution (see Section A.7). -/
 theorem equiv_congr (h₁ : A ≈ C) (h₂ : B ≈ D) : A ≈ B ↔ C ≈ D :=
@@ -207,9 +228,57 @@ example : {1, 2} ∪ {2, 3} ≈ {1, 2, 3} :=
   sorry
 
 /-- #### Definition 3.1.14 (Subsets) -/
-instance : HasSubset Set where
+@[default_instance] instance : HasSubset Set where
   Subset A B := ∀ x, x ∈ A → x ∈ B
-instance : HasSSubset Set where
-  SSubset A B := A ≠ B ∧ A ⊆ B
+@[default_instance] instance : HasSSubset Set where
+  SSubset A B := A ≉ B ∧ A ⊆ B
+
+/-- #### Remark 3.1.15 -/
+instance : Trans (· ≈ ·) Subset Subset where
+  trans {A B C} (h₁ : A ≈ B) (h₂ : B ⊆ C) x (h : x ∈ A) := show x ∈ C from
+    suffices x ∈ B from h₂ x this ; (h₁ x).mp h
+instance : Trans Subset (· ≈ ·) Subset where
+  trans {A B C} (h₁ : A ⊆ B) (h₂ : B ≈ C) x (h : x ∈ A) := show x ∈ C from
+    suffices x ∈ B from (h₂ x).mp this ; h₁ x h
+instance : Trans (· ≈ ·) SSubset SSubset where
+  trans {A B C} := fun (h₁ : A ≈ B) ⟨(ne : B ≉ C), (h₂ : B ⊆ C)⟩ => show A ≉ C ∧ A ⊆ C from
+    ⟨neq_of_eq_neq h₁ ne, trans h₁ h₂⟩
+instance : Trans SSubset (· ≈ ·) SSubset where
+  trans {A B C} := fun ⟨(ne : A ≉ B), (h₁ : A ⊆ B)⟩ (h₂ : B ≈ C) => show A ≉ C ∧ A ⊆ C from
+    ⟨neq_of_neq_eq ne h₂, trans h₁ h₂⟩
+
+/-- #### Examples 3.1.16 -/
+example : {1, 2, 4} ⊆ {1, 2, 3, 4, 5} :=
+  sorry
+/-- #### Examples 3.1.16 -/
+example : {1, 2, 4} ⊂ {1, 2, 3, 4, 5} :=
+  sorry
+/-- #### Examples 3.1.16 -/
+example : A ⊆ A :=
+  sorry
+/-- #### Examples 3.1.16 -/
+example : ∅ ⊆ A :=
+  sorry
+
+/-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
+instance : Trans Subset Subset Subset where
+  trans {A B C} (h₁ : A ⊆ B) (h₂ : B ⊆ C) x (h : x ∈ A) := show x ∈ C from h₂ x (h₁ x h)
+/-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
+theorem subset_antisymm : A ⊆ B → B ⊆ A → A ≈ B := fun h₁ h₂ x => ⟨h₁ x, h₂ x⟩
+instance : Trans Subset SSubset SSubset where
+  trans {A B C} := fun (h₁ : A ⊆ B) ⟨(ne : B ≉ C), (h₂ : B ⊆ C)⟩ => show A ≉ C ∧ A ⊆ C from
+    suffices A ≈ C → False from ⟨this, trans h₁ h₂⟩
+    fun e : A ≈ C =>
+      suffices C ⊆ B from ne (subset_antisymm h₂ this)
+      trans (Setoid.symm e) h₁
+instance : Trans SSubset Subset SSubset where
+  trans {A B C} := fun ⟨(ne : A ≉ B), (h₁ : A ⊆ B)⟩ (h₂ : B ⊆ C) => show A ≉ C ∧ A ⊆ C from
+    suffices A ≈ C → False from ⟨this, trans h₁ h₂⟩
+    fun e : A ≈ C =>
+      suffices B ⊆ A from ne (subset_antisymm h₁ this)
+      trans h₂ (Setoid.symm e)
+/-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
+instance : Trans SSubset SSubset SSubset where
+  trans {A B C} (h₁ : A ⊂ B) (h₂ : B ⊂ C) := trans h₁ h₂.2
 
 end Set
