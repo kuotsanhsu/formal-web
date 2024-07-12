@@ -10,3 +10,7 @@ macro "∃!" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``Ex
 end
 
 theorem Classical.mtr {p q} (h : ¬p → ¬q) (hq : q) : p := byContradiction (h · hq)
+
+/-- Following the definition of `∉`. -/
+notation:50 a:50 " ≉ " b:50 => ¬ (a ≈ b)
+theorem Setoid.rfl {α} [Setoid α] {a : α} : a ≈ a := refl a
