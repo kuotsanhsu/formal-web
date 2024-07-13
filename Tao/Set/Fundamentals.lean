@@ -254,17 +254,20 @@ example : {1, 2, 4} ⊆ {1, 2, 3, 4, 5} :=
 example : {1, 2, 4} ⊂ {1, 2, 3, 4, 5} :=
   sorry
 /-- #### Examples 3.1.16 -/
-example : A ⊆ A :=
-  sorry
+theorem subset_rfl : A ⊆ A := fun _ => id
 /-- #### Examples 3.1.16 -/
-example : ∅ ⊆ A :=
-  sorry
+theorem empty_subset : ∅ ⊆ A := fun _ h => absurd h not_in_empty
 
 /-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
 instance : Trans Subset Subset Subset where
   trans {A B C} (h₁ : A ⊆ B) (h₂ : B ⊆ C) x (h : x ∈ A) := show x ∈ C from h₂ x (h₁ x h)
 /-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
 theorem subset_antisymm : A ⊆ B → B ⊆ A → A ≈ B := fun h₁ h₂ x => ⟨h₁ x, h₂ x⟩
+theorem not_ssusbset_same : ¬A ⊂ A := fun ⟨(ne : A ≉ A), _⟩ => ne Setoid.rfl
+theorem ssubset_asymm : A ⊂ B → B ⊂ A → False :=
+  fun ⟨(ne₁ : A ≉ B), (h₁ : A ⊆ B)⟩ ⟨_, (h₂ : B ⊆ A)⟩ =>
+    suffices A ≈ B from ne₁ this
+    subset_antisymm h₁ h₂
 instance : Trans Subset SSubset SSubset where
   trans {A B C} := fun (h₁ : A ⊆ B) ⟨(ne : B ≉ C), (h₂ : B ⊆ C)⟩ => show A ≉ C ∧ A ⊆ C from
     suffices A ≈ C → False from ⟨this, trans h₁ h₂⟩
