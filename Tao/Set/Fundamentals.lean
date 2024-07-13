@@ -19,7 +19,7 @@ NOTE: must use `≈` instead of `=`; otherwise, equality becomes trivial.
 axiom Set : Type
 namespace Set
 variable {a b c d x y : Set} -- objects, which are sets in PST
-variable {A B C D : Set} -- sets
+variable {A A' B B' C D : Set} -- sets
 
 /-- #### Definition 3.1.1 -/
 protected axiom mem : Set → Set → Prop
@@ -283,5 +283,23 @@ instance : Trans SSubset Subset SSubset where
 /-- #### Proposition 3.1.17 (Sets are partially ordered by set inclusion) -/
 instance : Trans SSubset SSubset SSubset where
   trans {A B C} (h₁ : A ⊂ B) (h₂ : B ⊂ C) := trans h₁ h₂.2
+
+/-- #### Axiom 3.6 (Axiom of specification)
+This axiom is also known as the *axiom of separation*.
+-/
+protected axiom spec (A : Set) (P : Set → Prop) : ∃ B : Set, ∀ y, y ∈ B ↔ y ∈ A ∧ P y
+@[default_instance] noncomputable instance : Sep Set Set where
+  sep P A := (Set.spec A P).choose
+variable {P : Set → Prop}
+theorem spec_def : y ∈ {x ∈ A | P x} ↔ y ∈ A ∧ P y := (Set.spec A P).choose_spec y
+
+theorem spec_same : {x ∈ A | P x} ⊆ A :=
+  fun y (h : y ∈ {x ∈ A | P x}) => show y ∈ A from (spec_def.mp h).1
+theorem spec_congr : A ≈ A' → {x ∈ A | P x} ≈ {x ∈ A' | P x} :=
+  fun (h : ∀ x, x ∈ A ↔ x ∈ A') y =>
+    calc  y ∈ {x ∈ A | P x}
+      _ ↔ y ∈ A ∧ P y := spec_def
+      _ ↔ y ∈ A' ∧ P y := and_congr_left' (h y)
+      _ ↔ y ∈ {x ∈ A' | P x} := spec_def.symm
 
 end Set
