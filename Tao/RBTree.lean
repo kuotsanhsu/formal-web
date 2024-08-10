@@ -575,23 +575,29 @@ instance : LawfulSingleton α (Tree α) where
   insert_emptyc_eq _ := rfl
 
 theorem ins_black_BH {L R : Tree α} {a x}
-  : {n : Nat} → BH (black L a R) n → BH ((black L a R).insert x) n
+  : {n : Nat} → BH (black L a R) n → BH (insert.ins x (black L a R)) n
   | .succ n, .black hL hR =>
     let t := black L a R
-    have : insert.ins x t =
-      if x < a then
+    if h₁ : x < a then
+      have : insert.ins x t =
         match insert.ins x L with
         | red (red A x B) y C
         | red A x (red B y C) => red (black A x B) y (black C a R)
         | L => black L a R
-      else if a < x then
+        := if_pos h₁
+      sorry
+    else if h₂ : a < x then
+      have : insert.ins x t =
         match insert.ins x R with
         | red (red B y C) z D
         | red B y (red C z D) => red (black L a B) y (black C z D)
         | R => black L a R
-      else t
-      := rfl
-    sorry
+        := trans (if_neg h₁) (if_pos h₂)
+      sorry
+    else
+      have : insert.ins x t = t := trans (if_neg h₁) (if_neg h₂)
+      sorry
+
 
 theorem insert_BH {t : Tree α} {x m n} : BH t m → BH (t.insert x) n :=
   sorry
@@ -599,3 +605,71 @@ theorem insert_BH {t : Tree α} {x m n} : BH t m → BH (t.insert x) n :=
 end Tree
 
 end Try3Inorder
+
+class TotalOrder (α) extends LT α where
+  irrefl {a : α} : ¬ a < a
+  -- asymm {a b : α} : a < b → a > b → False
+  trans {a b c : α} : a < b → b < c → a < c
+  total {a b : α} : ¬a < b → ¬b < a → a = b
+
+namespace TotalOrder
+variable {α} [self : TotalOrder α] {a b : α}
+
+theorem asymm : a < b → ¬ a > b
+  | h₁, h₂ => irrefl (trans h₁ h₂)
+
+instance : @Trans α α α (· < ·) (· < ·) (· < ·) where
+  trans := trans
+
+section LE
+
+instance : LE α where
+  le a b := a = b ∨ a < b
+
+theorem refl : a ≤ a := .inl rfl
+
+instance : @Antisymm α (· ≤ ·) where
+  antisymm
+    | .inl rfl, _
+    | _, .inl rfl => rfl
+    | .inr h₁, .inr h₂ => (asymm h₁ h₂).rec
+
+instance : @Trans α α α (· ≤ ·) (· ≤ ·) (· ≤ ·) where
+  trans
+    | .inl rfl, h
+    | h, .inl rfl => h
+    | .inr h₁, .inr h₂ => .inr (trans h₁ h₂)
+
+end LE
+
+section Decidable
+variable [decLt : DecidableRel self.lt]
+
+instance : DecidableEq α
+  | a, b =>
+    match decLt a b, decLt b a with
+    | isFalse h₁, isFalse h₂ => isTrue (total h₁ h₂)
+    | isFalse h₁, isTrue h₂ => isFalse fun | rfl => h₁ h₂
+    | isTrue h₁, isFalse h₂ => isFalse fun | rfl => h₂ h₁
+    | isTrue h₁, isTrue h₂ => isFalse (asymm h₁ h₂).rec
+
+instance (a b : α) : Decidable (a ≤ b) :=
+  show Decidable (a = b ∨ a < b) from inferInstance
+
+end Decidable
+
+section Trichotomy
+
+theorem not_lt_iff_ge : ¬a < b ↔ a ≥ b := sorry
+
+theorem not_le_iff_gt : ¬a ≤ b ↔ a > b := sorry
+
+theorem ne_iff_lt_or_gt : a ≠ b ↔ a < b ∨ a > b := sorry
+
+theorem eq_iff_not_le_nor_gt : a = b ↔ ¬a < b ∧ ¬a > b := sorry
+
+theorem trichotomy : a < b ∨ a = b ∨ a > b := sorry
+
+end Trichotomy
+
+end TotalOrder
