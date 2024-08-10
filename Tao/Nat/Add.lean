@@ -7,9 +7,8 @@ theorem add_def : ∃ add : ℕ → ℕ → ℕ, ∀ m, add 0 m = m ∧ ∀ n, a
   from ⟨fun n m => (this m).choose n, fun m => (this m).choose_spec⟩
   rec _
 
-noncomputable def add : ℕ → ℕ → ℕ := add_def.choose
 noncomputable instance : Add ℕ where
-  add := add
+  add := add_def.choose
 
 variable {n m : ℕ}
 

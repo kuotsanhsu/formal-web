@@ -9,9 +9,8 @@ theorem mul_def : ∃ mul : ℕ → ℕ → ℕ, ∀ m, mul 0 m = 0 ∧ ∀ n, m
   from ⟨fun n m => (this m).choose n, fun m => (this m).choose_spec⟩
   fun m => rec (fun _ x => x + m) 0
 
-noncomputable def mul : ℕ → ℕ → ℕ := mul_def.choose
 noncomputable instance : Mul ℕ where
-  mul := mul
+  mul := mul_def.choose
 theorem zero_mul : 0 * m = 0 := (mul_def.choose_spec m).1
 theorem succ_mul : n++ * m = n * m + m := (mul_def.choose_spec m).2 n
 
@@ -96,7 +95,7 @@ theorem pos_of_mul_pos : n ≠ 0 → m ≠ 0 → n * m ≠ 0 :=
     suffices n = 0 ∨ m = 0 from this.rec hn hm
     eq_zero_iff_mul_eq_zero.mp h
 
-/-- #### Proposition2.3.4 (Distributive law) -/
+/-- #### Proposition 2.3.4 (Distributive law) -/
 theorem mul_add : a * (b + c) = a * b + a * c :=
   suffices ∀ a, a * (b + c) = a * b + a * c from this a
   ind (
@@ -128,7 +127,7 @@ theorem add_mul : (b + c) * a = b * a + c * a :=
     _ = b * a + a * c := congrArg (· + a * c) mul_comm
     _ = b * a + c * a := congrArg _ mul_comm
 
-/-- #### Proposition2.3.5 (Multiplicationisassociative)
+/-- #### Proposition 2.3.5 (Multiplication is associative)
 #### Exercise 2.3.3
 -/
 theorem mul_assoc : a * b * c = a * (b * c) :=
@@ -156,7 +155,7 @@ theorem lt_mul_pos (pos : c ≠ 0) : a < b → a * c < b * c :=
         _ = a * c + d * c := add_mul
     ⟨_, pos_of_mul_pos hd pos, this⟩
 
-/-- #### Corollary2.3.7 (Cancellationlaw) -/
+/-- #### Corollary 2.3.7 (Cancellation law) -/
 theorem mul_cancel (pos : c ≠ 0) : a * c = b * c → a = b :=
   fun (e : a * c = b * c) =>
     match order_trichotomy a b with

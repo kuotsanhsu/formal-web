@@ -13,62 +13,126 @@ are not identical. For instance, `{2} ∪ {3} ≈ {2, 3}` and `2 + 3 ≈ 5`, whe
 is also meaningless (union pertains to sets, not numbers).
 
 NOTE: must use `≈` instead of `=`; otherwise, equality becomes trivial.
+
+* https://math.stackexchange.com/questions/3508498/why-do-we-allow-redundant-axioms-in-zfc
+* https://math.stackexchange.com/questions/2343272/minimum-number-of-axioms-for-zfc-set-theory
+
 -/
 
-/-- #### Axiom 3.1 (Sets are objects) -/
 axiom Set : Type
 namespace Set
-variable {a b c d x y : Set} -- objects, which are sets in PST
-variable {A A' B B' C D : Set} -- sets
 
-/-- #### Definition 3.1.1 -/
-protected axiom Mem : Set → Set → Prop
+axiom Mem : Set → Set → Prop
 instance : Membership Set Set where
   mem := Set.Mem
 
-/-- #### Axiom 3.2 (Equality of sets) -/
 instance : Setoid Set where
   r A B := ∀ x, x ∈ A ↔ x ∈ B
   iseqv.refl _ _ := Iff.rfl
   iseqv.symm h x := (h x).symm
   iseqv.trans h₁ h₂ x := trans (h₁ x) (h₂ x)
+instance : Trans (α := Set) (· ≈ ·) (· ≈ ·) (· ≈ ·) where
+  trans := Setoid.trans
+@[default_instance] instance : HasSubset Set where
+  Subset A B := ∀ x ∈ A, x ∈ B
 
 /-- Substitutes equality on the LHS of `∈`. -/
 axiom extensionality {x y A : Set} : x ≈ y → (x ∈ A ↔ y ∈ A)
 
-instance : Trans (α := Set) (· ≈ ·) (· ≈ ·) (· ≈ ·) where
-  trans := Setoid.trans
-theorem neq_of_eq_neq : A ≈ B → B ≉ C → A ≉ C :=
-  fun (h₁ : A ≈ B) (h₂ : B ≉ C) (h : A ≈ C) =>
-    suffices B ≈ C from h₂ this
-    calc  B
-      _ ≈ A := Setoid.symm h₁
-      _ ≈ C := h
-instance : Trans (α := Set) (· ≈ ·) (· ≉ ·) (· ≉ ·) where
-  trans := neq_of_eq_neq
-theorem neq_of_neq_eq : A ≉ B → B ≈ C → A ≉ C :=
-  fun (h₁ : A ≉ B) (h₂ : B ≈ C) (h : A ≈ C) =>
-    suffices A ≈ B from h₁ this
-    calc  A
-      _ ≈ C := h
-      _ ≈ B := Setoid.symm h₂
-instance : Trans (α := Set) (· ≉ ·) (· ≈ ·) (· ≉ ·) where
-  trans := neq_of_neq_eq
+axiom replacement {P : Set → Set → Prop} (A : Set) (h : ∀ x ∈ A, ∃? y, P x y)
+  : ∃ B : Set, ∀ y, y ∈ B ↔ ∃ x ∈ A, P x y
 
-#check (trans : A = B → B ≠ C → A ≠ C)
-#check_failure (trans : A ≈ B → B ≉ C → A ≉ C)
-#check (trans : A ≠ B → B = C → A ≠ C)
-#check_failure (trans : A ≉ B → B ≈ C → A ≉ C)
+theorem specification {P : Set → Prop} (A : Set)
+  : ∃ B : Set, ∀ y, y ∈ B ↔ y ∈ A ∧ P y :=
+  have ⟨B, (h : ∀ y, y ∈ B ↔ ∃ x ∈ A, x ≈ y ∧ P y)⟩ :=
+    replacement A <|
+      show ∀ x ∈ A, ∃? y, x ≈ y ∧ P y from
+      show ∀ x ∈ A, ∀ y, x ≈ y ∧ P y → ∀ z, x ≈ z ∧ P z → z ≈ y from
+      fun x _ y ⟨(hy : x ≈ y), _⟩ z ⟨(hz : x ≈ z), _⟩ => trans (Setoid.symm hz) hy
+  Exists.intro B fun y => show y ∈ B ↔ y ∈ A ∧ P y from
+    suffices (∃ x, x ∈ A ∧ x ≈ y ∧ P y) ↔ y ∈ A ∧ P y from trans (h y) this
+    Iff.intro
+      fun | ⟨x, (hx : x ∈ A), (e : x ≈ y), (h : P y)⟩ => ⟨(extensionality e).mp hx, h⟩
+      fun | ⟨(hy : y ∈ A), (h : P y)⟩ => ⟨y, hy, Setoid.rfl, h⟩
+@[default_instance] noncomputable instance : Sep Set Set where
+  sep P A := (@specification P A).choose
+section
+variable {P : Set → Prop} {x y A B : Set}
+
+theorem spec_def : y ∈ {x ∈ A | P x} ↔ y ∈ A ∧ P y := (specification A).choose_spec y
+theorem spec_same : {x ∈ A | P x} ⊆ A := fun _ h => (spec_def.mp h).1
+theorem spec_congr : A ≈ B → {x ∈ A | P x} ≈ {x ∈ B | P x} :=
+  fun h y => (iff_congr spec_def spec_def).mpr (and_congr_left' (h y))
+
+end
+
+noncomputable instance : Inter Set where
+  inter A B := {x ∈ A | x ∈ B}
+example {x A B : Set} : x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B := spec_def
+
+axiom powerset (A : Set) : ∃ B : Set, ∀ x ⊆ A, x ∈ B
+class Powerset (α : Type _) where
+  /-- Powerset: `𝒫 A`  -/
+  powerset : α → α
+@[inherit_doc] prefix:75 "𝒫" => Powerset.powerset
+noncomputable instance : Powerset Set where
+  powerset A := (powerset A).choose
+def powerset_def {A B : Set} : A ⊆ B → A ∈ 𝒫 B := (powerset B).choose_spec A
+
+theorem pairing (x y : Set) : ∃ A : Set, x ∈ A ∧ y ∈ A ∧ ∀ z ∈ A, z ≈ x ∨ z ≈ y :=
+  sorry
+theorem singleton (a : Set) : ∃ A : Set, ∀ x, x ∈ A ↔ x ≈ a :=
+  have ⟨A, (ha : a ∈ A), _, (h : ∀ x ∈ A, x ≈ a ∨ x ≈ a)⟩ := pairing a a
+  ⟨A, fun x => ⟨or_self_iff.mp ∘ h x, fun e => (extensionality (Setoid.symm e)).mp ha⟩⟩
+
+@[default_instance] noncomputable instance : Singleton Set Set where
+  singleton a := (Set.singleton a).choose
+theorem singleton_def {x a : Set} : x ∈ {a} ↔ x ≈ a := (singleton a).choose_spec x
+theorem singleton_def' {a : Set} : a ∈ {a} := singleton_def.mpr Setoid.rfl
+
+/-- Union of all elements. -/
+axiom sum (A : Set) : ∃ B : Set, ∀ x, x ∈ B ↔ ∃ a ∈ A, x ∈ a
+
+theorem union (A B : Set) : ∃ C : Set, ∀ x, x ∈ C ↔ x ∈ A ∨ x ∈ B :=
+  have ⟨X, hX⟩ := pairing A B
+  have ⟨C, hC⟩ := sum X
+  ⟨C, sorry⟩
+noncomputable instance : Union Set where
+  union A B := (union A B).choose
+theorem union_def {x A B : Set} : x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B := (union A B).choose_spec x
+
+noncomputable def succ (A : Set) : Set := A ∪ {A}
+def Inductive (A : Set) : Prop := (∃ e ∈ A, ∀ x, x ∉ e) ∧ ∀ x ∈ A, x.succ ∈ A
+axiom infinity : ∃ A : Set, Inductive A
+noncomputable instance : Inhabited Set where
+  default := infinity.choose
+
+@[default_instance] noncomputable instance : EmptyCollection Set where
+  emptyCollection := {x ∈ default | False}
+theorem not_in_empty {x : Set} : x ∉ ∅ := And.right ∘ spec_def.mp
+
+theorem prod (A : Set) : ∃ B : Set, ∀ x, x ∈ B ↔ ∀ a ∈ A, x ∈ a := sorry
+noncomputable def N : Set := (prod {A ∈ 𝒫 default | Inductive A}).choose
+
+def Disjoint (A B : Set) : Prop := ¬∃ x, x ∈ A ∧ x ∈ B
+axiom regularity {A : Set} (h : ∃ x, x ∈ A) : ∃ B ∈ A, Disjoint A B
+
+-- axiom choice
+
+
+
+/-- #### Axiom 3.3 (Empty set) -/
+protected axiom empty : ∃ A : Set, ∀ x, x ∉ A
+
+variable {a b c d x y : Set} -- objects, which are sets in PST
+variable {A A' B B' C D : Set} -- sets
+
+theorem neq_of_eq_neq : A ≈ B → B ≉ C → A ≉ C := fun h₁ h₂ h => h₂ (trans (Setoid.symm h₁) h)
+theorem neq_of_neq_eq : A ≉ B → B ≈ C → A ≉ C := fun h₁ h₂ h => h₁ (trans h (Setoid.symm h₂))
 
 /-- The "is an element of" relation `∈` obeys the axiom of substitution (see Section A.7). -/
 theorem equiv_congr (h₁ : A ≈ C) (h₂ : B ≈ D) : A ≈ B ↔ C ≈ D :=
   forall_congr' fun x => iff_congr (h₁ x) (h₂ x)
-
-/-- #### Axiom 3.3 (Empty set) -/
-protected axiom empty : ∃ A : Set, ∀ x, x ∉ A
-@[default_instance] noncomputable instance : EmptyCollection Set where
-  emptyCollection := Set.empty.choose
-theorem not_in_empty : x ∉ ∅ := Set.empty.choose_spec x
 
 /-- There can only be one empty set. -/
 theorem unique_empty : A ≈ ∅ ↔ ∀ x, x ∉ A :=
@@ -80,19 +144,6 @@ theorem unique_empty : A ≈ ∅ ↔ ∀ x, x ∉ A :=
 theorem single_choice (h : A ≉ ∅) : ∃ x, x ∈ A :=
   suffices ¬∀ x, x ∉ A from Classical.not_forall_not.mp this
   unique_empty.subst h
-
-/-- #### Axiom 3.4 (Singleton sets and pair sets) -/
-protected axiom singleton (a : Set) : ∃ A : Set, ∀ y, y ∈ A ↔ y ≈ a
-@[default_instance] noncomputable instance : Singleton Set Set where
-  singleton a := (Set.singleton a).choose
-theorem singleton_def : y ∈ {a} ↔ y ≈ a := (Set.singleton a).choose_spec y
-theorem singleton_def' : a ∈ {a} := singleton_def.mpr Setoid.rfl
-
-/-- #### Axiom 3.5 (Pairwise union) -/
-protected axiom union (A B : Set) : ∃ C : Set, ∀ x, x ∈ C ↔ x ∈ A ∨ x ∈ B
-noncomputable instance : Union Set where
-  union A B := (Set.union A B).choose
-theorem union_def : x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B := (Set.union A B).choose_spec x
 
 theorem union_congr (h₁ : A ≈ C) (h₂ : B ≈ D) : A ∪ B ≈ C ∪ D :=
   fun x =>
@@ -322,33 +373,6 @@ instance : Trans SSubset Subset SSubset where
 instance : Trans SSubset SSubset SSubset where
   trans {A B C} (h₁ : A ⊂ B) (h₂ : B ⊂ C) := trans h₁ h₂.2
 
-protected abbrev Spec : Prop :=
-  ∀ P : Set → Prop, ∀ A : Set, ∃ B : Set, ∀ y, y ∈ B ↔ y ∈ A ∧ P y
-/-- #### Axiom 3.6 (Axiom of specification)
-This axiom is also known as the *axiom of separation*.
--/
-protected axiom spec : Set.Spec
-@[default_instance] noncomputable instance : Sep Set Set where
-  sep P A := (Set.spec P A).choose
-section
-variable {P : Set → Prop}
-
-theorem spec_def : y ∈ {x ∈ A | P x} ↔ y ∈ A ∧ P y := (Set.spec P A).choose_spec y
-theorem spec_same : {x ∈ A | P x} ⊆ A :=
-  fun y (h : y ∈ {x ∈ A | P x}) => show y ∈ A from (spec_def.mp h).1
-theorem spec_congr : A ≈ A' → {x ∈ A | P x} ≈ {x ∈ A' | P x} :=
-  fun (h : ∀ x, x ∈ A ↔ x ∈ A') y =>
-    calc  y ∈ {x ∈ A | P x}
-      _ ↔ y ∈ A ∧ P y := spec_def
-      _ ↔ y ∈ A' ∧ P y := and_congr_left' (h y)
-      _ ↔ y ∈ {x ∈ A' | P x} := spec_def.symm
-
-end
-
-/-- #### Definition 3.1.22 (Intersections) -/
-noncomputable instance : Inter Set where
-  inter A B := {x ∈ A | x ∈ B}
-example : x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B := spec_def
 
 /-- #### Examples 3.1.24 -/
 example : {1, 2, 4} ∩ {2, 3, 4} ≈ {2, 4} :=
@@ -426,11 +450,6 @@ theorem compl_inter : X \ A ∩ B ≈ (X \ A) ∪ (X \ B) := sorry
 
 end
 
-protected abbrev Replace : Prop := ∀ P : Set → Set → Prop, ∀ A : Set,
-  (∀ x ∈ A, ∃? y, P x y) → ∃ B : Set, ∀ z, z ∈ B ↔ ∃ x ∈ A, P x z
-/-- #### Axiom 3.7 (Replacement) -/
-protected axiom replace : Set.Replace
-
 structure Peano {N : Type} (zero : N) (succ : N → N) : Prop where
   /-- #### Axiom 2.3 -/
   succ_ne_zero {n : N} : succ n ≠ zero
@@ -461,19 +480,7 @@ example : A ∪ (A ∩ B) ≈ A := sorry
 /-- #### Exercise 3.1.9 -/
 example {X} : A ∪ B ≈ X → A ∩ B ≈ ∅ → A ≈ X \ B ∧ B ≈ X \ A := sorry
 
-/-- #### Exercise 3.1.11 -/
-example : Set.Replace → Set.Spec :=
-  fun replacement (P : Set → Prop) (A : Set) => show ∃ B : Set, ∀ y, y ∈ B ↔ y ∈ A ∧ P y from
-    have ⟨B, (h : ∀ y, y ∈ B ↔ ∃ x ∈ A, x ≈ y ∧ P y)⟩ :=
-      replacement _ A <|
-        show ∀ x ∈ A, ∃? y, x ≈ y ∧ P y from
-        show ∀ x ∈ A, ∀ y, x ≈ y ∧ P y → ∀ z, x ≈ z ∧ P z → z ≈ y from
-        fun x _ y ⟨(hy : x ≈ y), _⟩ z ⟨(hz : x ≈ z), _⟩ => trans (Setoid.symm hz) hy
-    Exists.intro B fun y => show y ∈ B ↔ y ∈ A ∧ P y from
-      suffices (∃ x, x ∈ A ∧ x ≈ y ∧ P y) ↔ y ∈ A ∧ P y from trans (h y) this
-      Iff.intro
-        fun | ⟨x, (hx : x ∈ A), (e : x ≈ y), (h : P y)⟩ => ⟨(extensionality e).mp hx, h⟩
-        fun | ⟨(hy : y ∈ A), (h : P y)⟩ => ⟨y, hy, Setoid.rfl, h⟩
+-- #### Exercise 3.1.11
 
 section «Exercise 3.1.12»
 variable (hA : A' ⊆ A) (hB : B' ⊆ B)
