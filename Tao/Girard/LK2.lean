@@ -52,7 +52,6 @@ theorem LK.Hauptsatz {Γ Δ} : LK Γ Δ → LK' Γ Δ
   -- | @cut Γ Δ (.and A B) Γ' Δ' (@cut [] [] _ _ _ h h') _ => _
   -- | @cut Γ Δ (.and A B) Γ' Δ' (@cut [] (_::[]) _ _ _ h h') _ => _
   | @cut (.and A B) Γ Δ Γ' Δ' (conjunction'l h') (conjunction h₁ h₂) => _
-  | @cut (.and A B) Γ Δ Γ' Δ' (conjunction'r h') (conjunction h₁ h₂) => _
   | @cut _ _ _ _ _ (@cut _ [] _ _ _ h h') (@cut _ _ _ _ [] g g') => _
     -- match h with
     -- | conjunction h₁ h₂ => _
